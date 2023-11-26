@@ -41,18 +41,7 @@ public:
 
         for (const string &word : words)
         {
-            if (word_to_document_freqs_.find(word) == word_to_document_freqs_.end())
-            {
-                word_to_document_freqs_[word] = unordered_map<int, double>();
-            }
-
-            if (document_ids_count_.find(document_id) == document_ids_count_.end())
-            {
-                document_ids_count_[document_id] = 0;
-            }
-
-            document_ids_count_[document_id]++;
-            word_to_document_freqs_[word][document_id] += 1.0 / words.size(); // Используем частное от общего количества слов
+            word_to_document_freqs_[word][document_id] += 1.0 / words.size();
         }
 
         document_count_++;
@@ -124,6 +113,11 @@ private:
         return query;
     }
 
+    double CalculateIdf(const string &word) const
+    {
+        return log(static_cast<double>(document_count_) / word_to_document_freqs_.at(word).size());
+    }
+
     vector<Document> FindAllDocuments(const Query &query) const
     {
         vector<Document> matched_documents;
@@ -131,17 +125,14 @@ private:
 
         for (const string &word : query.positive_words)
         {
-            if (word_to_document_freqs_.find(word) != word_to_document_freqs_.end())
-            {
-                double idf = log(static_cast<double>(document_count_) / word_to_document_freqs_.at(word).size());
+            double idf = CalculateIdf(word);
 
-                for (const auto &[document_id, term_freq] : word_to_document_freqs_.at(word))
+            for (const auto &[document_id, term_freq] : word_to_document_freqs_.at(word))
+            {
+                if (query.negative_words.count(word) == 0)
                 {
-                    if (query.negative_words.count(word) == 0)
-                    {
-                        double tfidf = term_freq * idf;
-                        document_to_relevance[document_id] += tfidf;
-                    }
+                    double tfidf = term_freq * idf;
+                    document_to_relevance[document_id] += tfidf;
                 }
             }
         }
